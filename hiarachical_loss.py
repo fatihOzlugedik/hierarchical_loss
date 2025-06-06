@@ -138,7 +138,6 @@ class HierarchicalLoss():
         cond_21 = mid_loss  - top_loss  # = −log p(C^(2)|C^(1))
         top_only = top_loss             # = −log p(C^(1)|C^(0))
 
-        # 7) Form final weighted sum exactly as Eq.(4):
         total_loss = λ3 * cond_32 \
                    + λ2 * cond_21 \
                    + λ1 * top_only

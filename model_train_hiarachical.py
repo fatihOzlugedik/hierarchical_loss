@@ -61,6 +61,7 @@ class ModelTrainer:
         "Reactive Conditions": ["Reactive changes"],
         "Normal Findings": ["Normalbefund"]
         }
+        self.hiarachical_loss = hl.HierarchicalLoss(self.hiararchy, device=self.device)
 
     def launch_training(self):
         '''initializes training process.'''
@@ -142,15 +143,14 @@ class ModelTrainer:
             prediction= self.model(
                 bag)
 
-            #loss_func = nn.CrossEntropyLoss()
-            hiarachical_loss=hl.HierarchicalLoss(self.hierarchy,self.device)
+            
             # Get the list of leaf nodes and their indices
-            leaf_nodes = list(hiarachical_loss.leaf_to_idx.keys())
+            leaf_nodes = list(self.hiarachical_loss.leaf_to_idx.keys())
             num_leaves = len(leaf_nodes)
     
             one_hot_label = torch.zeros(num_leaves)
             one_hot_label[label] = 1.0
-            loss_out=hiarachical_loss.get_loss(prediction, one_hot_label.to(self.device))
+            loss_out=self.hiarachical_loss.get_loss(prediction, one_hot_label.to(self.device))
             
             train_loss += loss_out.data
             

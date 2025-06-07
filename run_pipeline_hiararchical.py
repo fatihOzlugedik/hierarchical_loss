@@ -14,18 +14,7 @@ from models.transformer import Transformer
 from models.wbcmil import WBCMIL
 
 torch.multiprocessing.set_sharing_strategy('file_system')
-class_count = 8
-# import from other, own modules
-# get the number of patients in each class counts
-def get_class_sizes(dictionary):
-    class_sizes = []
-    class_labels = [0,1,2,3,4,5,6,7]
-    
-    for class_label in class_labels:
-        count = dictionary.get(class_label,0)  # Avoid KeyError
-        class_sizes.append(count)
-    
-    return class_sizes
+
 
 
 
@@ -146,35 +135,14 @@ datasets['test'] = MllDataset(
 print("Initialize dataloaders...")
 dataloaders = {}
 
-# Ensure balanced sampling
-# Get total sample sizes
-#class_sizes_train = get_class_sizes(datasets['train'].get_class_distribution())
-#class_sizes_val = get_class_sizes(datasets['val'].get_class_distribution())
-#class_sizes_test = get_class_sizes(datasets['test'].get_class_distribution())
 
-# Sum the class sizes from the training, validation, and test splits
-#class_sizes_total = [train + val + test for train, val, test in zip(class_sizes_train, class_sizes_val, class_sizes_test)]
-
-print("Total class sizes:", class_sizes_total)
-
-# Calculate label frequencies
-#label_freq = [class_sizes_total[c] / sum(class_sizes_total) for c in range(class_count)]
-# Balance sampling frequencies for equal sampling
-#individual_sampling_prob = [(1 / class_count) * (1 / label_freq[c]) for c in range(class_count)]
 
 print(datasets['train'])
 
-#idx_sampling_freq_train = torch.tensor(individual_sampling_prob)[datasets['train'].labels]
 
-#sampler_train = WeightedRandomSampler(
-    #weights=idx_sampling_freq_train,
-    #replacement=True,
-    #num_samples=len(idx_sampling_freq_train)
-#)
 
 dataloaders['train'] = DataLoader(
     datasets['train'],
-    #sampler=sampler_train,    
     num_workers=4  
 )
 

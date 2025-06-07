@@ -170,7 +170,7 @@ class ModelTrainer:
             # transforms prediction tensor into index of position with highest
             # value
             label_prediction = torch.argmax(prediction, dim=1).item()
-            label_groundtruth = label[0].item()
+            label_groundtruth = truth_idx
 
             # store patient information for potential later analysis
             data_obj.add_patient(

@@ -12,9 +12,9 @@ import argparse as ap
 import models
 from models.transformer import Transformer
 from models.wbcmil import WBCMIL
+import class_balancer
 
 torch.multiprocessing.set_sharing_strategy('file_system')
-
 
 
 
@@ -94,6 +94,7 @@ parser.add_argument(
 args = parser.parse_args()
 fold=args.fold
 
+
 dataset_path="/vol/data/Beluga"
 TARGET_FOLDER=f"/vol/data/Belgua_results/baseline_superBloom_{args.arch}"
 # store results in target folder
@@ -127,7 +128,7 @@ datasets['test'] = MllDataset(
     aug_im_order=False,
     split='test'
 )
-
+balancer=class_balancer.ClassBalancer()
 
 
 

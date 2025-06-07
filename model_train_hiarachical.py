@@ -36,7 +36,7 @@ class ModelTrainer:
         self.class_count = class_count
         self.early_stop = early_stop
         self.device = device
-        self.hiararchy=hierarchy = {
+        self.hiararchy= {
         "root": ["Malignant", "NonMalignant"],
 
         "Malignant": [
@@ -147,10 +147,9 @@ class ModelTrainer:
             # Get the list of leaf nodes and their indices
             leaf_nodes = list(hiarachical_loss.leaf_to_idx.keys())
             num_leaves = len(leaf_nodes)
-            
-            truth_idx = hiarachical_loss.leaf_to_idx[label]
+    
             one_hot_label = torch.zeros(num_leaves)
-            one_hot_label[truth_idx] = 1.0
+            one_hot_label[label] = 1.0
             loss_out=hiarachical_loss.get_loss(prediction, one_hot_label.to(self.device))
             
             train_loss += loss_out.data
@@ -199,6 +198,9 @@ class ModelTrainer:
             accuracy, int(time.time() - time_pre_epoch), split))
 
         return train_loss, accuracy, confusion_matrix, data_obj.return_data()
+    
+
+        
 
 
 class DataMatrix():

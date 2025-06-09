@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import hiarachical_loss as hl
+import dataframe_image as dfi
 
 class Analyzer:
     
@@ -61,6 +62,9 @@ class Analyzer:
         return top_conf_matrices
     
     def calulate_accuracy(self, confusion_matrix):
+        # Convert to numpy if it's a torch tensor
+        if hasattr(confusion_matrix, "cpu") and hasattr(confusion_matrix, "numpy"):
+            confusion_matrix = confusion_matrix.cpu().numpy()
         correct_predictions = np.trace(confusion_matrix)
         total_predictions = np.sum(confusion_matrix)
         accuracy = correct_predictions / total_predictions if total_predictions > 0 else 0
@@ -68,7 +72,7 @@ class Analyzer:
 
 def main():
     # Get file path from user
-    result_path = input("Enter the path to result directory: ")
+    result_path = "/lustre/groups/labs/marr/qscd01/workspace/fatih.oezluegedik/results/hl_0.5_transformer"
     
     # Create analyzer
     analyzer = Analyzer(result_path)
@@ -144,6 +148,26 @@ def main():
     plt.legend()
     plt.savefig(f"{result_path}/accuracy_comparison.png")
     print(f"Visualization saved to {result_path}/accuracy_comparison.png")
+    
+    # --- Save table as PNG with mean and std row using dataframe_image ---
+    df = pd.read_csv(f"{result_path}/hierarchical_accuracies.csv")
+    mean_row = ['Mean'] + [df[col].mean() for col in df.columns if col != 'Fold']
+    std_row = ['Std'] + [df[col].std() for col in df.columns if col != 'Fold']
+    df_table = df.copy()
+    df_table.loc['Mean'] = mean_row
+    df_table.loc['Std'] = std_row
+
+    # Format all float columns to 3 decimals
+    for col in df_table.columns:
+        if col != 'Fold':
+            df_table[col] = df_table[col].apply(lambda x: f"{x:.3f}")
+
+    # Save as PNG using dataframe_image
+    dfi.export(df_table, f"{result_path}/hierarchical_accuracies_table.png")
+    print(f"Table saved to {result_path}/hierarchical_accuracies_table.png")
+    
+
+
 
 if __name__ == "__main__":
     main()

@@ -12,7 +12,7 @@ import argparse as ap
 import models
 from models.transformer import Transformer
 from models.wbcmil import WBCMIL
-import class_balancer
+import random
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
@@ -89,14 +89,37 @@ parser.add_argument(
     '--save_model',
     help='choose wether model should be saved',
     required=False,
-    default=1)           
+    default=1)
+parser.add_argument(
+    '--loss',
+    help='choose loss function',
+    required=True,
+    choices=['hl', 'CE'],
+    default=1)
+parser.add_argument(
+    '--alpha',
+    help='alpha value',
+    required=True,
+    default=1)            
                # store model parameters if 1
 args = parser.parse_args()
 fold=args.fold
+loss=args.loss
+architecture = args.arch
+alpha = float(args.alpha)
+def seed_everything(seed=42):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)  # if you are using multi-GPU.
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    os.environ["PYTHONHASHSEED"] = str(seed)
+seed_everything(42) 
 
-
-dataset_path="/vol/data/Beluga"
-TARGET_FOLDER=f"/vol/data/Belgua_results/baseline_superBloom_{args.arch}"
+dataset_path="/lustre/groups/labs/marr/qscd01/workspace/furkan.dasdelen/dino_feature_extractor/DinoBloom-vits14-features"
+TARGET_FOLDER=f"/lustre/groups/labs/marr/qscd01/workspace/fatih.oezluegedik/results/{loss}_{alpha}_{architecture}"
 # store results in target folder
 TARGET_FOLDER = os.path.join(TARGET_FOLDER, f'fold_{fold}')
 if not os.path.exists(TARGET_FOLDER):
@@ -128,7 +151,6 @@ datasets['test'] = MllDataset(
     aug_im_order=False,
     split='test'
 )
-balancer=class_balancer.ClassBalancer()
 
 
 
@@ -166,9 +188,9 @@ print("Found device: ", ngpu, "x ", device)
 
 
 if args.arch.lower() == 'transformer':
-    model = Transformer(input_dim=384, num_classes=class_count, linear_dropout=0.0)
+    model = Transformer(input_dim=384, num_classes=18, linear_dropout=0.0)
 elif args.arch.lower() == 'wbcmil':
-    model = WBCMIL(input_dim=384, num_classes=class_count, linear_dropout=0.0)
+    model = WBCMIL(input_dim=384, num_classes=18, linear_dropout=0.0)
 
 
 if(ngpu > 1):
@@ -188,10 +210,13 @@ train_obj = ModelTrainer(
         args.ep),
     optimizer=optimizer,
     scheduler=scheduler,
-    class_count=class_count,
+    class_count=18,
     early_stop=int(
         args.es),
-    device=device)
+    device=device,
+    loss=loss,
+    alpha=alpha,
+    )
 model, conf_matrix, data_obj = train_obj.launch_training()
 
 

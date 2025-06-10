@@ -27,6 +27,8 @@ class ModelTrainer:
             scheduler,
             class_count,
             device,
+            loss,
+            alpha,
             early_stop=20):
         self.model = model
         self.dataloaders = dataloaders
@@ -36,6 +38,8 @@ class ModelTrainer:
         self.class_count = class_count
         self.early_stop = early_stop
         self.device = device
+        self.loss = loss
+        self.alpha = alpha
         self.hiararchy= {
         "root": ["Malignant", "NonMalignant"],
 
@@ -61,7 +65,7 @@ class ModelTrainer:
         "Reactive Conditions": ["Reactive changes"],
         "Normal Findings": ["Normalbefund"]
         }
-        self.hiarachical_loss = hl.HierarchicalLoss(self.hiararchy, device=self.device)
+        self.hiarachical_loss = hl.HierarchicalLoss(self.hiararchy, device=self.device, alpha=self.alpha)
 
     def launch_training(self):
         '''initializes training process.'''
@@ -150,8 +154,12 @@ class ModelTrainer:
     
             one_hot_label = torch.zeros(num_leaves)
             one_hot_label[label] = 1.0
-            loss_out=self.hiarachical_loss.get_loss(prediction, one_hot_label.to(self.device))
-            
+           
+            if self.loss == "hl":
+                loss_out=self.hiarachical_loss.get_loss(prediction, one_hot_label.to(self.device))
+            elif self.loss == "CE":
+                loss_function = nn.CrossEntropyLoss()
+                loss_out = loss_function(prediction, label.to(self.device))
             train_loss += loss_out.data
             
 
@@ -169,7 +177,7 @@ class ModelTrainer:
             # transforms prediction tensor into index of position with highest
             # value
             label_prediction = torch.argmax(prediction, dim=1).item()
-            label_groundtruth = truth_idx
+            label_groundtruth = label
 
             # store patient information for potential later analysis
             data_obj.add_patient(

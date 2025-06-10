@@ -8,13 +8,13 @@ import networkx as nx
 
 
 class HierarchicalLoss():
-    def __init__(self, hierarchy, device):
+    def __init__(self, hierarchy,device,alpha=0.5):
         self.hierarchy = hierarchy
         self.hierarchy_graph = self.build_hierarchy_graph(hierarchy)
         self.T32, self.T21, self.leaf_to_idx, self.mid_to_idx, self.top_to_idx = self.generate_transition_matrices(self.hierarchy_graph)   
         self.T32 = torch.from_numpy(self.T32).to(device)
         self.T21 = torch.from_numpy(self.T21).to(device)
-        self.alpha = 0.5  # Default value, should be set appropriately
+        self.alpha = alpha
 
     def add_edges_from_hierarchy(self, graph, parent):
         if parent in self.hierarchy:

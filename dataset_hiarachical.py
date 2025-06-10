@@ -25,7 +25,7 @@ class MllDataset(Dataset):
    
         self.aug_im_order = aug_im_order
         self.path_of_dataset = path_of_dataset
-        path_of_fold = os.path.join(path_of_dataset,f"fold_{current_fold}",f'{split}.csv')
+        path_of_fold = os.path.join(path_of_dataset,f"data_fold_{current_fold}",f'{split}.csv')
         data_of_fold = pd.read_csv(path_of_fold)
         self.hiararchy ={
         "root": ["Malignant", "NonMalignant"],
@@ -58,7 +58,7 @@ class MllDataset(Dataset):
         self.patient = data_of_fold['patient_files'].tolist()
         self.string_labels = data_of_fold['diagnose'].tolist()
         self.labels = []
-        for label in string_labels:
+        for label in self.string_labels:
             if label in self.leaf_to_idx:
                 self.labels.append(self.leaf_to_idx[label])
             else:
@@ -68,9 +68,7 @@ class MllDataset(Dataset):
         
         
     
-    def get_class_distribution(self):
-       
-        return class_distribution    
+    
 
     def __len__(self):
         return len(self.labels)
@@ -80,10 +78,9 @@ class MllDataset(Dataset):
     def __getitem__(self, idx):
 
         pat_id = self.patient[idx]
-        path= os.path.join(self.path_of_dataset, pat_id+'.h5')
-        with h5py.File(path, 'r') as hf:
-            bag = hf['features'][()]
-            
+        path= os.path.join(self.path_of_dataset, pat_id+'_combined.pt')
+        data = torch.load(path, map_location=torch.device("cpu"),weights_only=False)
+        bag = data['features']    
         label = self.labels[idx]
         # shuffle features by image order in bag, if desired
         if(self.aug_im_order):
@@ -92,6 +89,6 @@ class MllDataset(Dataset):
             bag = bag[new_idx, :]
 
 
-        label_regular = torch.Tensor([label]).long()
+        #label_regular = torch.Tensor([label]).long()
 
-        return bag, label_regular, pat_id
+        return bag, label, pat_id

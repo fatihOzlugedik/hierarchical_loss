@@ -3,79 +3,33 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import hiarachical_loss as hl
 import dataframe_image as dfi
-
-class Analyzer:
-    
-    def __init__(self,result_path):
-        self.result_path = result_path
-        self.hiararchy ={
-        "root": ["Malignant", "NonMalignant"],
-
-        "Malignant": [
-        "Acute Leukemias",
-        "Myelodysplastic Syndromes",
-        "Myeloid Overlap Syndromes",
-        "Chronic Myeloid Neoplasms",
-        "Lymphoid Neoplasms",
-        "Plasma Cell Neoplasms"
-        ],
-        "Acute Leukemias": ["AML", "ALL", "AL"],
-        "Myelodysplastic Syndromes": ["MDS"],
-        "Myeloid Overlap Syndromes": ["CMML", "MDS / MPN", "MPN / MDS-RS-T"],
-        "Chronic Myeloid Neoplasms": ["MPN", "CML", "ET", "PV"],
-        "Lymphoid Neoplasms": ["B-cell neoplasm", "HCL", "T-cell neoplasm"],
-        "Plasma Cell Neoplasms": ["MM", "PCL"],
-
-        "NonMalignant": [
-        "Reactive Conditions",
-        "Normal Findings"
-        ],
-        "Reactive Conditions": ["Reactive changes"],
-        "Normal Findings": ["Normalbefund"]
-        }
-        hiarachical_loss = hl.HierarchicalLoss(self.hiararchy, device='cpu')
-        self.T32 = hiarachical_loss.T32
-        self.T21 = hiarachical_loss.T21
- 
-    def load_results(self):
-        confusion_matrixes=[]
-        for i in range(5):
-            conf_matrix = np.load(f"{self.result_path}/fold_{i}/test_conf_matrix.npy")
-            confusion_matrixes.append(conf_matrix)
-        
-        return confusion_matrixes
-    
-    
-    def calculate_middle_confusion_matrix(self, leaf_confusion_matrixes):
-        mid_conf_matrices = []
-        for conf_matrix in leaf_confusion_matrixes:
-            mid_conf_matrix = self.T32.T @ conf_matrix @ self.T32 
-            mid_conf_matrices.append(mid_conf_matrix)
-        return mid_conf_matrices
-
-
-    def calculate_top_confusion_matrix(self, mid_confusion_matrixes):
-        top_conf_matrices = []
-        for conf_matrix in mid_confusion_matrixes:
-            top_conf_matrix = self.T21.T @ conf_matrix @ self.T21 
-            top_conf_matrices.append(top_conf_matrix)
-        return top_conf_matrices
-    
-    def calulate_accuracy(self, confusion_matrix):
-        # Convert to numpy if it's a torch tensor
-        if hasattr(confusion_matrix, "cpu") and hasattr(confusion_matrix, "numpy"):
-            confusion_matrix = confusion_matrix.cpu().numpy()
-        correct_predictions = np.trace(confusion_matrix)
-        total_predictions = np.sum(confusion_matrix)
-        accuracy = correct_predictions / total_predictions if total_predictions > 0 else 0
-        return accuracy
+import argparse as ap
+from sklearn.metrics import f1_score, balanced_accuracy_score
+import analyzer as an
 
 def main():
-    # Get file path from user
-    result_path = "/lustre/groups/labs/marr/qscd01/workspace/fatih.oezluegedik/results/hl_0.5_transformer"
-    
+    parser = ap.ArgumentParser()
+
+    # Algorithm / training parameters
+   
+    parser.add_argument(
+        '--alpha',
+        help='alpha value for hierarchical loss',
+        required=True,
+    )
+    parser.add_argument(
+        '--arch',
+        help='model architecture to use',
+        required=True,
+    )
+    args = parser.parse_args()
+    alpha = float(args.alpha)
+    architecture = args.arch
+
+    result_path = f"/lustre/groups/labs/marr/qscd01/workspace/fatih.oezluegedik/results_dinoBloomB/hl_{alpha}_{architecture}"
+    #result_path='/lustre/groups/labs/marr/qscd01/workspace/fatih.oezluegedik/results_dinoBloomS/CE_wbcmil'
     # Create analyzer
-    analyzer = Analyzer(result_path)
+    analyzer = an.Analyzer(result_path)
     
     # Load leaf-level confusion matrices
     leaf_confusion_matrices = analyzer.load_results()
@@ -86,71 +40,101 @@ def main():
     # Calculate top-level confusion matrices
     top_confusion_matrices = analyzer.calculate_top_confusion_matrix(mid_confusion_matrices)
     
-    # Calculate accuracies for all folds and all levels
-    leaf_accuracies = []
-    mid_accuracies = []
-    top_accuracies = []
-    
+    # Calculate metrics for all folds and all levels
+    leaf_accuracies, mid_accuracies, top_accuracies = [], [], []
+    leaf_bal_accs, mid_bal_accs, top_bal_accs = [], [], []
+    leaf_macro_f1s, mid_macro_f1s, top_macro_f1s = [], [], []
+    leaf_weighted_f1s, mid_weighted_f1s, top_weighted_f1s = [], [], []
+
     for i in range(len(leaf_confusion_matrices)):
-        # Calculate leaf-level accuracy
+        # Leaf level
         leaf_acc = analyzer.calulate_accuracy(leaf_confusion_matrices[i])
+        leaf_bal = analyzer.calculate_balanced_accuracy(leaf_confusion_matrices[i])
+        leaf_macro_f1 = analyzer.calculate_macro_f1(leaf_confusion_matrices[i])
+        leaf_weighted_f1 = analyzer.calculate_weighted_f1(leaf_confusion_matrices[i])
         leaf_accuracies.append(leaf_acc)
-        
-        # Calculate middle-level accuracy
+        leaf_bal_accs.append(leaf_bal)
+        leaf_macro_f1s.append(leaf_macro_f1)
+        leaf_weighted_f1s.append(leaf_weighted_f1)
+
+        # Middle level
         mid_acc = analyzer.calulate_accuracy(mid_confusion_matrices[i])
+        mid_bal = analyzer.calculate_balanced_accuracy(mid_confusion_matrices[i])
+        mid_macro_f1 = analyzer.calculate_macro_f1(mid_confusion_matrices[i])
+        mid_weighted_f1 = analyzer.calculate_weighted_f1(mid_confusion_matrices[i])
         mid_accuracies.append(mid_acc)
-        
-        # Calculate top-level accuracy
+        mid_bal_accs.append(mid_bal)
+        mid_macro_f1s.append(mid_macro_f1)
+        mid_weighted_f1s.append(mid_weighted_f1)
+
+        # Top level
         top_acc = analyzer.calulate_accuracy(top_confusion_matrices[i])
+        top_bal = analyzer.calculate_balanced_accuracy(top_confusion_matrices[i])
+        top_macro_f1 = analyzer.calculate_macro_f1(top_confusion_matrices[i])
+        top_weighted_f1 = analyzer.calculate_weighted_f1(top_confusion_matrices[i])
         top_accuracies.append(top_acc)
-        
-        print(f"Fold {i}: Leaf accuracy = {leaf_acc:.4f}, Middle accuracy = {mid_acc:.4f}, Top accuracy = {top_acc:.4f}")
-    
-    # Calculate mean and std for each level
-    leaf_mean = np.mean(leaf_accuracies)
-    leaf_std = np.std(leaf_accuracies)
-    
-    mid_mean = np.mean(mid_accuracies)
-    mid_std = np.std(mid_accuracies)
-    
-    top_mean = np.mean(top_accuracies)
-    top_std = np.std(top_accuracies)
-    
+        top_bal_accs.append(top_bal)
+        top_macro_f1s.append(top_macro_f1)
+        top_weighted_f1s.append(top_weighted_f1)
+
+        print(
+            f"Fold {i}: "
+            f"Leaf acc={leaf_acc:.4f}, bal_acc={leaf_bal:.4f}, macroF1={leaf_macro_f1:.4f}, wF1={leaf_weighted_f1:.4f} | "
+            f"Mid acc={mid_acc:.4f}, bal_acc={mid_bal:.4f}, macroF1={mid_macro_f1:.4f}, wF1={mid_weighted_f1:.4f} | "
+            f"Top acc={top_acc:.4f}, bal_acc={top_bal:.4f}, macroF1={top_macro_f1:.4f}, wF1={top_weighted_f1:.4f}"
+        )
+
+    # Calculate mean and std for each metric and level
+    def mean_std(arr): return (np.mean(arr), np.std(arr))
+
+    metrics = {
+        "Leaf_Accuracy": leaf_accuracies,
+        "Leaf_Balanced_Accuracy": leaf_bal_accs,
+        "Leaf_MacroF1": leaf_macro_f1s,
+        "Leaf_WeightedF1": leaf_weighted_f1s,
+        "Middle_Accuracy": mid_accuracies,
+        "Middle_Balanced_Accuracy": mid_bal_accs,
+        "Middle_MacroF1": mid_macro_f1s,
+        "Middle_WeightedF1": mid_weighted_f1s,
+        "Top_Accuracy": top_accuracies,
+        "Top_Balanced_Accuracy": top_bal_accs,
+        "Top_MacroF1": top_macro_f1s,
+        "Top_WeightedF1": top_weighted_f1s,
+    }
+
+    # Print summary
     print("\nSummary:")
-    print(f"Leaf level: Mean accuracy = {leaf_mean:.4f} ± {leaf_std:.4f}")
-    print(f"Middle level: Mean accuracy = {mid_mean:.4f} ± {mid_std:.4f}")
-    print(f"Top level: Mean accuracy = {top_mean:.4f} ± {top_std:.4f}")
-    
+    for key in ["Leaf", "Middle", "Top"]:
+        print(
+            f"{key} level: "
+            f"Mean acc={np.mean(metrics[f'{key}_Accuracy']):.4f} ± {np.std(metrics[f'{key}_Accuracy']):.4f}, "
+            f"Mean bal_acc={np.mean(metrics[f'{key}_Balanced_Accuracy']):.4f} ± {np.std(metrics[f'{key}_Balanced_Accuracy']):.4f}, "
+            f"Mean macroF1={np.mean(metrics[f'{key}_MacroF1']):.4f} ± {np.std(metrics[f'{key}_MacroF1']):.4f}, "
+            f"Mean wF1={np.mean(metrics[f'{key}_WeightedF1']):.4f} ± {np.std(metrics[f'{key}_WeightedF1']):.4f}"
+        )
+
     # Save results to a CSV file
     results = pd.DataFrame({
         'Fold': list(range(5)),
         'Leaf_Accuracy': leaf_accuracies,
+        'Leaf_Balanced_Accuracy': leaf_bal_accs,
+        'Leaf_MacroF1': leaf_macro_f1s,
+        'Leaf_WeightedF1': leaf_weighted_f1s,
         'Middle_Accuracy': mid_accuracies,
-        'Top_Accuracy': top_accuracies
+        'Middle_Balanced_Accuracy': mid_bal_accs,
+        'Middle_MacroF1': mid_macro_f1s,
+        'Middle_WeightedF1': mid_weighted_f1s,
+        'Top_Accuracy': top_accuracies,
+        'Top_Balanced_Accuracy': top_bal_accs,
+        'Top_MacroF1': top_macro_f1s,
+        'Top_WeightedF1': top_weighted_f1s,
     })
-    
-    results.to_csv(f"{result_path}/hierarchical_accuracies.csv", index=False)
-    print(f"Results saved to {result_path}/hierarchical_accuracies.csv")
-    
-    # Visualize the results
-    plt.figure(figsize=(10, 6))
-    x = np.arange(len(leaf_accuracies))
-    width = 0.25
-    
-    plt.bar(x - width, leaf_accuracies, width, label='Leaf Level')
-    plt.bar(x, mid_accuracies, width, label='Middle Level')
-    plt.bar(x + width, top_accuracies, width, label='Top Level')
-    
-    plt.xlabel('Fold')
-    plt.ylabel('Accuracy')
-    plt.title('Hierarchical Accuracy by Fold')
-    plt.xticks(x, [f"Fold {i}" for i in range(5)])
-    plt.legend()
-    plt.savefig(f"{result_path}/accuracy_comparison.png")
-    print(f"Visualization saved to {result_path}/accuracy_comparison.png")
-    
+
+    results.to_csv(f"{result_path}/hierarchical_metrics.csv", index=False)
+    print(f"Results saved to {result_path}/hierarchical_metrics.csv")
+
     # --- Save table as PNG with mean and std row using dataframe_image ---
-    df = pd.read_csv(f"{result_path}/hierarchical_accuracies.csv")
+    df = pd.read_csv(f"{result_path}/hierarchical_metrics.csv")
     mean_row = ['Mean'] + [df[col].mean() for col in df.columns if col != 'Fold']
     std_row = ['Std'] + [df[col].std() for col in df.columns if col != 'Fold']
     df_table = df.copy()
@@ -162,9 +146,8 @@ def main():
         if col != 'Fold':
             df_table[col] = df_table[col].apply(lambda x: f"{x:.3f}")
 
-    # Save as PNG using dataframe_image
-    dfi.export(df_table, f"{result_path}/hierarchical_accuracies_table.png")
-    print(f"Table saved to {result_path}/hierarchical_accuracies_table.png")
+    dfi.export(df_table, f"{result_path}/hierarchical_metrics_table.png")
+    print(f"Table saved to {result_path}/hierarchical_metrics_table.png")
     
 
 

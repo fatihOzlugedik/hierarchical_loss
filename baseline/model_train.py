@@ -40,32 +40,7 @@ class ModelTrainer:
         self.device = device
         self.loss = loss
         self.alpha = alpha
-        self.hiararchy= {
-        "root": ["Malignant", "NonMalignant"],
-
-        "Malignant": [
-        "Acute Leukemias",
-        "Myelodysplastic Syndromes",
-        "Myeloid Overlap Syndromes",
-        "Chronic Myeloid Neoplasms",
-        "Lymphoid Neoplasms",
-        "Plasma Cell Neoplasms"
-        ],
-        "Acute Leukemias": ["AML", "ALL", "AL"],
-        "Myelodysplastic Syndromes": ["MDS"],
-        "Myeloid Overlap Syndromes": ["CMML", "MDS / MPN", "MPN / MDS-RS-T"],
-        "Chronic Myeloid Neoplasms": ["MPN", "CML", "ET", "PV"],
-        "Lymphoid Neoplasms": ["B-cell neoplasm", "HCL", "T-cell neoplasm"],
-        "Plasma Cell Neoplasms": ["MM", "PCL"],
-
-        "NonMalignant": [
-        "Reactive Conditions",
-        "Normal Findings"
-        ],
-        "Reactive Conditions": ["Reactive changes"],
-        "Normal Findings": ["Normalbefund"]
-        }
-        self.hiarachical_loss = hl.HierarchicalLoss(self.hiararchy, device=self.device, alpha=self.alpha)
+        
 
     def launch_training(self):
         '''initializes training process.'''
@@ -148,18 +123,13 @@ class ModelTrainer:
                 bag)
 
             
-            # Get the list of leaf nodes and their indices
-            leaf_nodes = list(self.hiarachical_loss.leaf_to_idx.keys())
-            num_leaves = len(leaf_nodes)
-    
+          
+            num_leaves = 8
             one_hot_label = torch.zeros(num_leaves)
             one_hot_label[label] = 1.0
            
-            if self.loss == "hl":
-                loss_out=self.hiarachical_loss.get_loss(prediction, one_hot_label.to(self.device))
-            elif self.loss == "CE":
-                loss_function = nn.CrossEntropyLoss()
-                loss_out = loss_function(prediction, label.to(self.device))
+            loss_function = nn.CrossEntropyLoss()
+            loss_out = loss_function(prediction, label.to(self.device))
             train_loss += loss_out.data
             
 

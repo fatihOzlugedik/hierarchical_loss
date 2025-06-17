@@ -25,51 +25,15 @@ class MllDataset(Dataset):
    
         self.aug_im_order = aug_im_order
         self.path_of_dataset = path_of_dataset
+        #Construct the path to the fold data
         path_of_fold = os.path.join(path_of_dataset,f"data_fold_{current_fold}",f'{split}.csv')
         data_of_fold = pd.read_csv(path_of_fold)
-        self.hiararchy ={
-        "root": ["Malignant", "NonMalignant"],
-
-        "Malignant": [
-        "Acute Leukemias",
-        "Myelodysplastic Syndromes",
-        "Myeloid Overlap Syndromes",
-        "Chronic Myeloid Neoplasms",
-        "Lymphoid Neoplasms",
-        "Plasma Cell Neoplasms"
-        ],
-        "Acute Leukemias": ["AML", "ALL", "AL"],
-        "Myelodysplastic Syndromes": ["MDS"],
-        "Myeloid Overlap Syndromes": ["CMML", "MDS / MPN", "MPN / MDS-RS-T"],
-        "Chronic Myeloid Neoplasms": ["MPN", "CML", "ET", "PV"],
-        "Lymphoid Neoplasms": ["B-cell neoplasm", "HCL", "T-cell neoplasm"],
-        "Plasma Cell Neoplasms": ["MM", "PCL"],
-
-        "NonMalignant": [
-        "Reactive Conditions",
-        "Normal Findings"
-        ],
-        "Reactive Conditions": ["Reactive changes"],
-        "Normal Findings": ["Normalbefund"]
-        }
-        self.hierarchical_loss = hl.HierarchicalLoss(self.hiararchy, device='cuda') 
-        self.leaf_to_idx = self.hierarchical_loss.leaf_to_idx
         
         self.patient = data_of_fold['patient_files'].tolist()
-        self.string_labels = data_of_fold['diagnose'].tolist()
-        self.labels = []
-        for label in self.string_labels:
-            if label in self.leaf_to_idx:
-                self.labels.append(self.leaf_to_idx[label])
-            else:
-                error_message = f"Label '{label}' not found in leaf_to_idx mapping."
-                raise ValueError(error_message)
+        self.labels = data_of_fold['label'].tolist()
     
         
         
-    
-    
-
     def __len__(self):
         return len(self.labels)
     

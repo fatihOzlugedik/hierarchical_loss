@@ -1,5 +1,5 @@
-from model_train_hiarachical import *   # model training function
-from dataset_hiarachical import *       # dataset
+from model_train import *   # model training function
+from dataset import *       # dataset
 # makes conversion from string label to one-hot encoding easier
 from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
@@ -93,7 +93,7 @@ parser.add_argument(
 
 args = parser.parse_args()
 fold=args.fold
-alpha = float(args.alpha)
+architecture = args.arch
 def seed_everything(seed=42):
     random.seed(seed)
     np.random.seed(seed)
@@ -105,8 +105,8 @@ def seed_everything(seed=42):
     os.environ["PYTHONHASHSEED"] = str(seed)
 seed_everything(42) 
 
-dataset_path="/lustre/groups/labs/marr/qscd01/workspace/furkan.dasdelen/dino_feature_extractor/DinoBloom-vits14-features"
-TARGET_FOLDER=f"/lustre/groups/labs/marr/qscd01/workspace/fatih.oezluegedik/results/baseline_mid_class_{architecture}"
+dataset_path="/lustre/groups/labs/marr/qscd01/workspace/furkan.dasdelen/dino_feature_extractor/DinoBloom-vitb14-features"
+TARGET_FOLDER=f"/lustre/groups/labs/marr/qscd01/workspace/fatih.oezluegedik/results_dinoBloomB/baseline_mid_class_{architecture}"
 # store results in target folder
 TARGET_FOLDER = os.path.join(TARGET_FOLDER, f'fold_{fold}')
 if not os.path.exists(TARGET_FOLDER):
@@ -175,9 +175,9 @@ print("Found device: ", ngpu, "x ", device)
 
 
 if args.arch.lower() == 'transformer':
-    model = Transformer(input_dim=384, num_classes=8, linear_dropout=0.0)
+    model = Transformer(input_dim=768, num_classes=8, linear_dropout=0.0)
 elif args.arch.lower() == 'wbcmil':
-    model = WBCMIL(input_dim=384, num_classes=8, linear_dropout=0.0)
+    model = WBCMIL(input_dim=768, num_classes=8, linear_dropout=0.0)
 
 
 if(ngpu > 1):
@@ -197,12 +197,11 @@ train_obj = ModelTrainer(
         args.ep),
     optimizer=optimizer,
     scheduler=scheduler,
-    class_count=18,
+    class_count=8,
     early_stop=int(
         args.es),
-    device=device,
-    loss=loss,
-    alpha=alpha,
+    device=device
+
     )
 model, conf_matrix, data_obj = train_obj.launch_training()
 

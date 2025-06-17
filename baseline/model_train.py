@@ -3,8 +3,6 @@ import torch.utils.data as data_utils
 import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
-import hiarachical_loss as hl
-
 
 import sys
 import time
@@ -27,8 +25,6 @@ class ModelTrainer:
             scheduler,
             class_count,
             device,
-            loss,
-            alpha,
             early_stop=20):
         self.model = model
         self.dataloaders = dataloaders
@@ -38,8 +34,7 @@ class ModelTrainer:
         self.class_count = class_count
         self.early_stop = early_stop
         self.device = device
-        self.loss = loss
-        self.alpha = alpha
+
         
 
     def launch_training(self):
@@ -120,14 +115,9 @@ class ModelTrainer:
                
             # forward pass
             prediction= self.model(
-                bag)
-
-            
+                bag)            
           
-            num_leaves = 8
-            one_hot_label = torch.zeros(num_leaves)
-            one_hot_label[label] = 1.0
-           
+ 
             loss_function = nn.CrossEntropyLoss()
             loss_out = loss_function(prediction, label.to(self.device))
             train_loss += loss_out.data

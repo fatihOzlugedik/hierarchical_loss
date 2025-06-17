@@ -9,7 +9,7 @@ from sklearn.model_selection import StratifiedKFold
 import os
 import pandas as pd
 import h5py
-import hiarachical_loss as hl
+
 
 # Actual dataset class
 class MllDataset(Dataset):
@@ -30,7 +30,7 @@ class MllDataset(Dataset):
         data_of_fold = pd.read_csv(path_of_fold)
         
         self.patient = data_of_fold['patient_files'].tolist()
-        self.labels = data_of_fold['label'].tolist()
+        self.labels = data_of_fold['labels'].tolist()
     
         
         
